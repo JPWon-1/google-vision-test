@@ -17,7 +17,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
 
 @RestController
 @CrossOrigin(origins = "*", methods = {RequestMethod.GET, RequestMethod.POST})
@@ -38,31 +39,6 @@ public class HomeController {
         }
     }
 
-    @GetMapping("/test")
-    public ResponseEntity<?> extractText() {
-        try {
-            AnnotateImageResponse imageResponse = fileService.test();
-            List<EntityAnnotation> landmarkAnnotations = imageResponse.getLandmarkAnnotationsList();
-            List<Map<String, String>> response = new ArrayList<>();
-            for (EntityAnnotation landmarkAnnotation : landmarkAnnotations) {
-                String description = landmarkAnnotation.getDescription();
-                LocationInfo locations = landmarkAnnotation.getLocations(0);
-                LatLng latLng = locations.getLatLng();
-                String latLngStr = latLng.getLatitude() + "," + latLng.getLongitude();
-                Map<String, String> valueMap = new HashMap<>();
-                valueMap.put("description", description);
-                valueMap.put("latLngStr", latLngStr);
-                valueMap.put("score", String.valueOf(landmarkAnnotation.getScore()));
-                response.add(valueMap);
-            }
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            System.out.print("Failed to extract text: " + e.getMessage());
-            e.printStackTrace();
-            return null;
-        }
-    }
 
     @PostMapping("/upload")
     public ResponseEntity<?> updateGpsData(@RequestParam("file") MultipartFile file) {
@@ -86,6 +62,7 @@ public class HomeController {
                     .max(Comparator.comparing(EntityAnnotation::getScore))
                     .orElse(null);
 
+            // todo : updatedImageFile null초기화 하지 않을 수 있는 방법 찾기.
             File updatedImageFile = null;
             if (highestScoreAnnotation != null) {
                 LocationInfo locations = highestScoreAnnotation.getLocations(0);
@@ -95,11 +72,12 @@ public class HomeController {
                 updatedImageFile = fileService.updateGpsData(file, longitude, latitude);
             }
 
+            // todo updatedImageFile null exception 체크하기.
             String absolutePath = updatedImageFile.getAbsolutePath();
             Path filePath = Paths.get(absolutePath).normalize();
             Resource resource = new UrlResource(filePath.toUri());
 
-            System.out.print("absolute File Path :" +absolutePath);
+            System.out.print("absolute File Path :" + absolutePath);
             if (!resource.exists() || !resource.isReadable()) {
                 throw new FileNotFoundException("File not found after upload: " + file.getOriginalFilename());
             }
