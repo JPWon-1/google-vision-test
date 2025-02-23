@@ -3,13 +3,7 @@ package com.example.demo;
 
 import com.google.cloud.vision.v1.*;
 import com.google.protobuf.ByteString;
-import org.apache.commons.imaging.Imaging;
-import org.apache.commons.imaging.common.RationalNumber;
 import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter;
-import org.apache.commons.imaging.formats.tiff.TiffImageMetadata;
-import org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants;
-import org.apache.commons.imaging.formats.tiff.constants.GpsTagConstants;
-import org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory;
 import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -121,37 +115,22 @@ public class VisionApiFileUpload {
 
     public File updateGpsData(MultipartFile file, double longitude, double latitude) {
         try {
-            File originFile = new File("/Users/jp/Pictures/test/origin_" + file.getOriginalFilename());
-            file.transferTo(originFile);
-            // 기존 EXIF 메타데이터 가져오기
-            TiffOutputSet outputSet = null;
-            try (FileInputStream fis = new FileInputStream(originFile)) {
-                TiffImageMetadata metadata = (TiffImageMetadata) Imaging.getMetadata(originFile);
-                if (metadata != null) {
-                    outputSet = metadata.getOutputSet();
-                }
-            }
-            // 새로운 EXIF 설정
-            if (outputSet == null) {
-                outputSet = new TiffOutputSet();
-            }
-            // GPS 디렉토리 추가
-            TiffOutputDirectory gpsDir = outputSet.findDirectory(ExifTagConstants.EXIF_TAG_GPSINFO.tag);
-            // 디렉토리가 없으면 새로 추가
-            if (gpsDir == null) {
-                TiffOutputDirectory gpsDirectory = outputSet.getOrCreateGpsDirectory();
-                gpsDirectory.add(GpsTagConstants.GPS_TAG_GPS_ALTITUDE_REF, (byte) 0);
-                gpsDirectory.add(GpsTagConstants.GPS_TAG_GPS_ALTITUDE, RationalNumber.valueOf(0));
-            }
 
-            System.out.print("위도:" + longitude + ", 경도:" + latitude);
+            // MultipartFile → 임시 파일 변환 (저장 X)
+            File tempFile = File.createTempFile(file.getOriginalFilename(), ".tmp");
+            file.transferTo(tempFile);
+
+            // 새로운 EXIF 설정
+            TiffOutputSet outputSet = new TiffOutputSet();
+
+            System.out.println("위도:" + longitude + ", 경도:" + latitude);
             // 위도, 경도 저장
             outputSet.setGpsInDegrees(longitude, latitude);
 
             // 새로운 파일로 저장
-            File outputJpeg = new File("/Users/jp/Pictures/test/updated_" + originFile.getName());
+            File outputJpeg = new File("/Users/jp/Pictures/test/updated_" + file.getOriginalFilename());
             try (OutputStream os = new FileOutputStream(outputJpeg);
-                 FileInputStream fis = new FileInputStream(originFile)) {
+                 FileInputStream fis = new FileInputStream(tempFile)) {
                 new ExifRewriter().updateExifMetadataLossless(fis, os, outputSet);
             }
 
