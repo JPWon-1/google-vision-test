@@ -28,6 +28,8 @@ dependencies {
     implementation 'com.google.cloud:libraries-bom:26.52.0'
     implementation 'com.google.cloud:google-cloud-vision:3.34.0'
     // google vision api end
+    // Apache Commons Math 4 Legacy
+    implementation 'org.apache.commons:commons-math4-legacy:4.0-beta1'
 }
 
 tasks.named('test') {
